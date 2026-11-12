@@ -36,6 +36,12 @@ function errText(e){
   if (/fetch|network/i.test(m)) return "No connection. Try again when you're back online.";
   return m || "Something went wrong. Try again.";
 }
+function setupHint(e){
+  const m = (e && e.message) || "";
+  if (/Invalid path|Invalid API key|No API key|Unregistered API key/i.test(m)) return "Can't connect to the database: check SUPABASE_URL and the publishable key in config.js.";
+  if (/team_code_required|team_ok|schema cache|does not exist/i.test(m)) return "The database isn't set up yet: run supabase/schema.sql in the Supabase SQL Editor.";
+  return errText(e);
+}
 function view(id){ ["#vSetup","#vSignin","#vApp"].forEach(v => $(v).hidden = v !== id); }
 
 /* ---------- boot & who's using it ---------- */
@@ -44,8 +50,17 @@ const LS = {
   set(k, v){ try { localStorage.setItem(k, v); } catch {} },
   del(k){ try { localStorage.removeItem(k); } catch {} }
 };
+// Accepts the project URL in any form people tend to paste:
+// https://ref.supabase.co, .../rest/v1/, or the dashboard link .../dashboard/project/ref
+function projectUrl(raw){
+  const s = String(raw || "").trim();
+  const dash = s.match(/supabase\.com\/dashboard\/project\/([a-z0-9]+)/i);
+  if (dash) return `https://${dash[1]}.supabase.co`;
+  if (/^[a-z0-9]{15,}$/i.test(s)) return `https://${s}.supabase.co`;
+  try { return new URL(/^https?:\/\//.test(s) ? s : "https://" + s).origin; } catch { return s; }
+}
 function client(code){
-  return window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {
+  return window.supabase.createClient(projectUrl(CFG.SUPABASE_URL), String(CFG.SUPABASE_ANON_KEY || "").trim(), {
     auth: { persistSession:false, autoRefreshToken:false },
     global: { headers: code ? { "x-team-code": code } : {} }
   });
@@ -71,7 +86,8 @@ async function showSignin(){
   $("#siRecent").hidden = !recent.length;
   $("#siRecent").innerHTML = recent.map(n => `<button type="button" data-name="${esc(n)}">${esc(n)}</button>`).join("");
   S.sb = S.sb || client("");
-  const { data:req } = await client("").rpc("team_code_required");
+  const { data:req, error:reqErr } = await client("").rpc("team_code_required");
+  if (reqErr) siErr(setupHint(reqErr));
   $("#siCodeWrap").hidden = !req;
   $("#siCode").value = req ? (LS.get("tmfr.code") || "") : "";
   setTimeout(() => $("#siName").focus(), 50);
@@ -89,7 +105,7 @@ $("#signinForm").addEventListener("submit", async e => {
   const sb = client(code);
   const { data:ok, error } = await sb.rpc("team_ok");
   b.disabled = false; b.textContent = "Continue";
-  if (error) { siErr(errText(error)); return; }
+  if (error) { siErr(setupHint(error)); return; }
   if (!ok) { siErr(code ? "That team code isn't right." : "Enter the team code."); $("#siCode").focus(); return; }
   S.sb = sb; S.code = code;
   LS.set("tmfr.name", name); if (code) LS.set("tmfr.code", code); else LS.del("tmfr.code");

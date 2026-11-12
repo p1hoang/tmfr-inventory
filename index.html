@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TMFR Parts</title>
+<meta name="description" content="TMU Formula Racing shop parts inventory">
+<meta name="theme-color" content="#1f5bd1">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="TMFR Parts">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Shown when config.js has not been filled in -->
+<section id="vSetup" class="center" hidden>
+  <div class="card">
+    <h1 class="h1"><small>TMFR Parts</small>Almost there</h1>
+    <p>Open <code>config.js</code> and paste your Supabase project URL and anon key, then redeploy. The README walks through it.</p>
+  </div>
+</section>
+
+<!-- Who's using it -->
+<section id="vSignin" class="center" hidden>
+  <form class="card" id="signinForm" novalidate>
+    <h1 class="h1"><small>TMU Formula Racing</small>Parts Inventory</h1>
+    <p class="help">Enter your name. It's saved on this device and shows in the history next to everything you add, take out or change.</p>
+    <label>Your name<input id="siName" autocomplete="name" autocapitalize="words" maxlength="40" placeholder="e.g. Phi"></label>
+    <div class="recent" id="siRecent" hidden></div>
+    <label id="siCodeWrap" hidden>Team code<input id="siCode" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Ask your lead"></label>
+    <button class="primary wide" id="siGo" type="submit">Continue</button>
+    <p class="note err" id="siErr" hidden></p>
+  </form>
+</section>
+
+<!-- Main app -->
+<section id="vApp" hidden>
+  <div class="wrap">
+    <header class="top">
+      <h1 class="h1"><small>TMU Formula Racing · Shop</small>Parts Inventory</h1>
+      <div class="actions">
+        <button id="btnWho" class="whochip" type="button" title="Switch name"></button>
+        <button id="btnActivity" type="button">Activity</button>
+        <button id="btnMore" type="button" aria-haspopup="true" aria-expanded="false">More</button>
+        <button id="btnScan" class="scanbtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scan</button>
+        <button id="btnAdd" class="primary" type="button">+ Add part</button>
+      </div>
+      <div class="menu" id="moreMenu" hidden>
+        <button type="button" id="btnImport">Import CSV</button>
+        <button type="button" id="btnExport">Export CSV</button>
+        <button type="button" id="btnReorder">Export reorder list</button>
+        <hr>
+        <div class="who" id="whoami"></div>
+        <button type="button" id="btnSignOut">Switch name</button>
+      </div>
+    </header>
+
+    <div class="bar">
+      <input id="q" type="search" placeholder="Search name, size, part #, bin, supplier…" aria-label="Search parts" autocomplete="off">
+      <div class="chips" id="chips" role="toolbar" aria-label="Filter"></div>
+      <div class="summary" id="summary">Loading inventory…</div>
+    </div>
+
+    <div id="status" class="note" hidden></div>
+    <main id="out"></main>
+  </div>
+  <button id="fab" class="fab scanbtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>Scan part</button>
+</section>
+
+<!-- Edit / add part -->
+<div id="sForm" class="scrim" hidden>
+  <form class="sheet" id="form" novalidate>
+    <h2 id="formTitle">Add part</h2>
+    <div class="banner" id="formBanner" hidden></div>
+    <div class="grid">
+      <label class="full">Name<input id="f_name" required placeholder="e.g. Deutsch DT 4-pin receptacle"></label>
+      <label>Category<input id="f_category" list="catList" placeholder="Pick or type a new one"></label>
+      <label>Size / spec<input id="f_spec" placeholder="e.g. 18 AWG, M5×12, 10 A"></label>
+      <label>Quantity<input id="f_qty" type="number" inputmode="decimal" min="0" step="any" value="0"></label>
+      <label>Unit<input id="f_unit" list="unitList" placeholder="pcs"></label>
+      <label>Low-stock at<input id="f_min_qty" type="number" inputmode="decimal" min="0" step="any" placeholder="0 = no alert"></label>
+      <label>Bin / location<input id="f_location" placeholder="e.g. Shelf B, Bin 4"></label>
+      <label>Part #<input id="f_pn" placeholder="Manufacturer or supplier #"></label>
+      <label>Supplier<input id="f_supplier" placeholder="e.g. Digi-Key, McMaster"></label>
+      <label class="full">Barcode<span class="fieldrow"><input id="f_barcode" placeholder="Scan to link, so future scans find this part" autocomplete="off"><button type="button" id="btnLinkScan">Scan</button></span></label>
+      <label class="full">Notes<textarea id="f_notes" placeholder="Crimp tool, colour, who to ask…"></textarea></label>
+    </div>
+    <div class="stamp" id="stamp"></div>
+    <div class="foot">
+      <div class="l">
+        <button type="button" id="btnDelete" class="danger" hidden>Delete</button>
+        <button type="button" id="btnHistory" hidden>History</button>
+      </div>
+      <div class="r">
+        <button type="button" id="btnCancel">Cancel</button>
+        <button type="submit" class="primary" id="btnSave">Save</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Live scanner -->
+<div id="sScan" class="scanner" hidden>
+  <div class="viewfinder">
+    <video id="video" playsinline muted autoplay></video>
+    <div class="reticle" aria-hidden="true"></div>
+    <div class="scanhint" id="scanHint">Point at a barcode or QR / Data Matrix code</div>
+  </div>
+  <div class="scanctl">
+    <button type="button" id="scTorch" hidden>Light</button>
+    <button type="button" id="scLabel" hidden>Read label instead</button>
+    <button type="button" id="scPhoto">Use a photo</button>
+    <button type="button" id="scType">Type code</button>
+    <button type="button" class="primary" id="scClose">Close</button>
+  </div>
+  <form class="typecode" id="typeForm" hidden>
+    <input id="typeIn" placeholder="Barcode or part #" autocomplete="off">
+    <button class="primary" type="submit">Look up</button>
+  </form>
+  <input id="photoIn" type="file" accept="image/*" capture="environment" hidden>
+</div>
+
+<!-- Working on it -->
+<div id="sBusy" class="scrim" hidden>
+  <div class="sheet">
+    <h2 id="busyTitle">Reading the label</h2>
+    <img id="busyThumb" class="thumb" alt="Captured frame" hidden>
+    <p class="help" id="busyMsg">This takes a few seconds.</p>
+  </div>
+</div>
+
+<!-- Found: quick take / put -->
+<div id="sFound" class="scrim" hidden>
+  <div class="sheet">
+    <h2>Found in inventory</h2>
+    <div class="found">
+      <div class="name" id="fdName"></div>
+      <div class="meta" id="fdMeta"></div>
+      <div class="bigcount" id="fdCount"></div>
+    </div>
+    <div class="adjust">
+      <label>Amount<input id="fdAmt" type="number" inputmode="decimal" min="0" step="any" value="1"></label>
+      <button type="button" id="fdTake">Take out</button>
+      <button type="button" class="primary" id="fdAdd">Put in</button>
+    </div>
+    <div class="foot">
+      <div class="l"><button type="button" id="fdEdit">Edit details</button></div>
+      <div class="r"><button type="button" id="fdAgain">Scan another</button><button type="button" id="fdClose">Done</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Activity -->
+<div id="sLog" class="scrim" hidden>
+  <div class="sheet">
+    <h2 id="logTitle">Recent activity</h2>
+    <div class="chips" id="logPeople" role="toolbar" aria-label="Filter by person"></div>
+    <div id="logList" class="log"></div>
+    <div class="foot"><div class="r"><button type="button" id="logClose">Close</button></div></div>
+  </div>
+</div>
+
+<!-- Import -->
+<div id="sImport" class="scrim" hidden>
+  <div class="sheet">
+    <h2>Import CSV</h2>
+    <p class="help">Bulk-add parts from a spreadsheet saved as CSV with a header row. Recognized columns (any order, extras ignored):</p>
+    <pre class="fmt">name,category,spec,qty,unit,min,location,part number,supplier,barcode,notes</pre>
+    <input id="fileCsv" type="file" accept=".csv,text/csv">
+    <p class="help" id="importMsg"></p>
+    <div class="foot"><div class="r">
+      <button type="button" id="btnImportCancel">Close</button>
+      <button type="button" class="primary" id="btnImportGo" disabled>Add rows</button>
+    </div></div>
+  </div>
+</div>
+
+<datalist id="catList"></datalist>
+<datalist id="unitList"><option value="pcs"><option value="m"><option value="ft"><option value="spool"><option value="pack"><option value="box"><option value="roll"><option value="set"></datalist>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

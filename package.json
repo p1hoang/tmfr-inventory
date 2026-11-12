@@ -1,0 +1,6 @@
+{
+  "name": "tmfr-parts-inventory",
+  "private": true,
+  "description": "TMU Formula Racing shop parts inventory (static PWA + Supabase)",
+  "engines": { "node": ">=18" }
+}
